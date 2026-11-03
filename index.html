@@ -51,8 +51,16 @@
     try {
       const bridge = window.vkBridge;
       if (!bridge) { throw new Error('VK Bridge не загрузился. Откройте страницу внутри VK.'); }
-      const data = await bridge.send('VKWebAppInit');
-      const auth = await bridge.send('VKWebAppGetAuthToken', { app_id: Number(window.APP_ID || 0), scope: SCOPE });
+      await bridge.send('VKWebAppInit');
+      let appId = Number(window.APP_ID || 0);
+      if (!appId) {
+        try {
+          const params = await bridge.send('VKWebAppGetLaunchParams');
+          appId = Number(params && params.vk_app_id) || 0;
+        } catch { appId = 0; }
+      }
+      if (!appId) { throw new Error('Не удалось определить ID приложения. Откройте страницу через vk.com/app<ID>.'); }
+      const auth = await bridge.send('VKWebAppGetAuthToken', { app_id: appId, scope: SCOPE });
       if (!auth || !auth.access_token) { throw new Error('VK не вернул ключ. Возможно, доступ отклонён.'); }
       tokenEl.value = auth.access_token;
       setStatus('Ключ получен. Скопируйте его и закройте страницу.');
